@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Check-in met GPS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #status { margin-top: 20px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>Check-in Les</h2>
+  <p>Toestaan dat je locatie wordt gebruikt om je aanwezigheid te bevestigen.</p>
+
+  <button onclick="checkLocation()">Check locatie</button>
+  <div id="status"></div>
+
+  <div id="checkin" style="display:none;">
+    <p>✅ Je bent op de juiste locatie!</p>
+    <a href='https://forms.gle/jouw_google_forms_link' target='_blank'>
+      <button>Ga naar incheckformulier</button>
+    </a>
+  </div>
+
+  <script>
+    const lokaalLat = 52.0682;
+    const lokaalLng = 4.3248;
+    const maxAfstand = 50;
+
+    function afstandInMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371e3;
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function checkLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const afstand = afstandInMeters(lat, lon, lokaalLat, lokaalLng);
+            const status = document.getElementById('status');
+            if (afstand < maxAfstand) {
+              status.textContent = `✅ Locatie bevestigd (${Math.round(afstand)} meter).`;
+              document.getElementById('checkin').style.display = 'block';
+            } else {
+              status.textContent = `❌ Je bent niet op de juiste locatie (${Math.round(afstand)} meter).`;
+            }
+          },
+          () => {
+            document.getElementById('status').textContent = 'Locatie ophalen mislukt of geweigerd.';
+          }
+        );
+      } else {
+        document.getElementById('status').textContent = 'GPS niet ondersteund op dit apparaat.';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,25 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Check-in met GPS</title>
+  <title>Check-in met GPS – Leskeuze</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
-    #status { margin-top: 20px; font-weight: bold; }
+    label, select, button { font-size: 1.1em; margin-top: 10px; display: block; }
   </style>
 </head>
 <body>
-  <h2>Check-in Les</h2>
-  <p>Toestaan dat je locatie wordt gebruikt om je aanwezigheid te bevestigen.</p>
+  <h2>Check-in: Kies jouw les</h2>
+  <p>Toestaan dat je locatie wordt gebruikt om verder te gaan.</p>
 
   <button onclick="checkLocation()">Check locatie</button>
   <div id="status"></div>
 
-  <div id="checkin" style="display:none;">
-    <p>✅ Je bent op de juiste locatie!</p>
-<a href='https://forms.office.com/e/6rhvbi2jQm?origin=lprLink' target='_blank'>
-  <button>Ga naar incheckformulier</button>
-</a>
+  <div id="leskeuze" style="display:none;">
+    <label for="les">Selecteer je les:</label>
+    <select id="les">
+      <option value="">-- Maak een keuze --</option>
+      <option value="https://forms.office.com/e/PL1-form">PL1</option>
+      <option value="https://forms.office.com/e/PL2-form">PL2</option>
+      <option value="https://forms.office.com/e/WISSEL-form">Wissel-les</option>
+      <option value="https://forms.office.com/e/SKILLS-form">Skills</option>
+      <option value="https://forms.office.com/e/PLS-form">PL|S</option>
+      <option value="https://forms.office.com/e/MB-form">MB</option>
+      <option value="https://forms.office.com/e/MDT-form">MDT</option>
+    </select>
+    <button onclick="doorgaan()">Ga naar lesformulier</button>
   </div>
 
   <script>
@@ -48,7 +56,7 @@
             const status = document.getElementById('status');
             if (afstand < maxAfstand) {
               status.textContent = `✅ Locatie bevestigd (${Math.round(afstand)} meter).`;
-              document.getElementById('checkin').style.display = 'block';
+              document.getElementById('leskeuze').style.display = 'block';
             } else {
               status.textContent = `❌ Je bent niet op de juiste locatie (${Math.round(afstand)} meter).`;
             }
@@ -59,6 +67,15 @@
         );
       } else {
         document.getElementById('status').textContent = 'GPS niet ondersteund op dit apparaat.';
+      }
+    }
+
+    function doorgaan() {
+      const keuze = document.getElementById('les').value;
+      if (keuze) {
+        window.open(keuze, '_blank');
+      } else {
+        alert('Kies eerst een les.');
       }
     }
   </script>

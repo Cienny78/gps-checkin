@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Check-in voor je les</title>
+  <title>Check-in voor je les SKILLS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; }
@@ -11,9 +11,9 @@
   </style>
 </head>
 <body>
-  <h2>Check-in</h2>
-  <p>Ben je op school? Klik op de knop hieronder om te kijken of je op de juiste locatie bent om in te checken :-).</p>
-  <button onclick="checkLocation()">📍 Check mijn locatie </button>
+  <h2>Check-in WL of MB|</h2>
+  <p>Ben je op school? Klik op de knop hieronder om te kijken of je op de juiste locatie bent om in te checken.</p>
+  <button onclick="checkLocation()">📍 Check mijn locatie</button>
   <div id="status"></div>
 
   <div id="formulier">
@@ -33,11 +33,14 @@
   </div>
 
   <script>
+    // Geef elk formulier een unieke ID, bijvoorbeeld de lesnaam of code
+    const formId = "MB"; // Pas dit aan per formulier!
+
     const locaties = [
       { lat: 52.0682, lng: 4.3248 },         // Haagse Hogeschool
-      { lat: 52.0360341, lng: 4.3623357 }    // Thuis
+      { lat: 52.0360341, lng: 4.3623357 }    // Thuis (voorbeeld)
     ];
-    const maxAfstand = 200;
+    const maxAfstand = 200; // meters
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -75,7 +78,7 @@
             }
 
             if (goedgekeurd) {
-              status.textContent = "✅ Top! Je bent op de juiste locatie. Vul nu je gegevens in.";
+              status.textContent = "✅ Top! Je bent op de juiste plek. Vul nu je gegevens in.";
               document.getElementById('formulier').style.display = 'block';
             } else {
               const afgerond = Math.round(kortsteAfstand);
@@ -95,18 +98,21 @@
       event.preventDefault();
 
       const vandaag = new Date().toISOString().split("T")[0];
-      const laatstIngecheckt = localStorage.getItem("checkin_datum");
+      // Unieke key per formulier per dag
+      const uniekeCheckKey = `checkin_${formId}_${vandaag}`;
+      const laatstIngecheckt = localStorage.getItem(uniekeCheckKey);
 
-      if (laatstIngecheckt === vandaag) {
-        alert("⏳ Je hebt vandaag al ingecheckt op dit apparaat.");
+      if (laatstIngecheckt === "done") {
+        alert("⏳ Je hebt vandaag al voor deze les ingecheckt op dit apparaat.");
         return;
       }
 
       const form = event.target;
       const formData = new FormData(form);
       formData.append('tijd', new Date().toLocaleString());
+      formData.append('formulier', formId); // optioneel: stuur formulier-id mee naar backend
 
-      fetch("https://script.google.com/macros/s/AKfycbzqa0p7bQxTAWhq-bFKxsgVZ6uyOjhbKN8SxPVbBgjGxFOUKN7nY5FEinRmIuZla0daNQ/exec", {
+      fetch("https://script.google.com/macros/s/AKfycbxUYQbzgvxZnZm8QDbqdevXoWFtblh5OQSqtDFgNuwTNKqiqf3rakcY3qHFslTUilEj/exec", {
         method: "POST",
         body: formData
       })
@@ -114,12 +120,12 @@
       .then(text => {
         if (text === "OK") {
           alert("✅ Je bent ingecheckt. Dankjewel!");
-          localStorage.setItem("checkin_datum", vandaag);
+          localStorage.setItem(uniekeCheckKey, "done");
           form.reset();
           document.getElementById("formulier").style.display = "none";
           document.getElementById("status").textContent = "";
         } else if (text === "AL_GEDAAN_VANDAAG") {
-          alert("⏳ Je hebt vandaag al ingecheckt (volgens het systeem).");
+          alert("⏳ Je hebt vandaag al ingecheckt voor deze les (volgens het systeem).");
         } else {
           alert("❌ Oei! Het opslaan ging mis.");
         }

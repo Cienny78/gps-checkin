@@ -12,8 +12,8 @@
 </head>
 <body>
   <h2>Check-in</h2>
-  <p>Ben je op school of thuis? Klik op de knop hieronder om te kijken of je op de juiste plek bent om in te checken :-).</p>
-  <button onclick="checkLocation()">📍 Check mijn plek</button>
+  <p>Ben je op school? Klik op de knop hieronder om te kijken of je op de juiste locatie bent om in te checken :-).</p>
+  <button onclick="checkLocation()">📍 Check mijn locatie </button>
   <div id="status"></div>
 
   <div id="formulier">
@@ -75,7 +75,7 @@
             }
 
             if (goedgekeurd) {
-              status.textContent = "✅ Top! Je bent op de juiste plek. Vul nu je gegevens in.";
+              status.textContent = "✅ Top! Je bent op de juiste locatie. Vul nu je gegevens in.";
               document.getElementById('formulier').style.display = 'block';
             } else {
               const afgerond = Math.round(kortsteAfstand);

@@ -1,38 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Check-in met GPS – Leskeuze</title>
+  <title>Check-in voor je les</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    label, select, button { font-size: 1.1em; margin-top: 10px; display: block; }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; }
+    input, label, button, select { display: block; width: 100%; margin-top: 10px; font-size: 1em; }
+    #formulier { display: none; }
+    #status { font-weight: bold; margin-top: 20px; }
   </style>
 </head>
 <body>
-  <h2>Check-in: Kies jouw les</h2>
-  <p>Toestaan dat je locatie wordt gebruikt om verder te gaan.</p>
-
-  <button onclick="checkLocation()">Check locatie</button>
+  <h2>Check-in</h2>
+  <p>Ben je op school of thuis? Klik op de knop hieronder om te kijken of je op de juiste plek bent om in te checken :-).</p>
+  <button onclick="checkLocation()">📍 Check mijn plek</button>
   <div id="status"></div>
 
-  <div id="leskeuze" style="display:none;">
-    <label for="les">Selecteer je les:</label>
-    <select id="les">
-      <option value="">-- Maak een keuze --</option>
-      <option value="https://forms.office.com/e/xQpcXks9Ah?origin=lprLink">PL1</option>
-      <option value="https://forms.office.com/e/egzL2nTnZt?origin=lprLink">PL2</option>
-      <option value="https://forms.office.com/e/Jvzzmxzkex?origin=lprLink">PL|S</option>
-      <option value="https://forms.office.com/e/VAfRSWCmwm?origin=lprLink">Skills</option>
-      <option value="https://forms.office.com/e/UhHKqG930f?origin=lprLink">MB</option>
-      <option value="https://forms.office.com/e/fXL0cMAp49?origin=lprLink">Wissel-les</option>
-    </select>
-    <button onclick="doorgaan()">Ga naar lesformulier</button>
+  <div id="formulier">
+    <form onsubmit="verzenden(event)">
+      <label>Wat is je voornaam?</label>
+      <input type="text" id="voornaam" name="voornaam" required>
+      <label>En je achternaam?</label>
+      <input type="text" id="achternaam" name="achternaam" required>
+      <label>Wat is je studentnummer?</label>
+      <input type="text" id="studentnummer" name="studentnummer" required>
+      <label>En je e-mailadres?</label>
+      <input type="email" id="email" name="email" required>
+      <input type="hidden" id="lat" name="lat">
+      <input type="hidden" id="lng" name="lng">
+      <button type="submit">✅ Inchecken</button>
+    </form>
   </div>
 
   <script>
-    const lokaalLat = 52.0682;
-    const lokaalLng = 4.3248;
-    const maxAfstand = 200;
+    const locaties = [
+      { lat: 52.0682, lng: 4.3248 },         // Haagse Hogeschool
+      { lat: 52.0360341, lng: 4.3623357 }    // Thuis
+    ];
+    const maxAfstand = 200; // meters
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -40,8 +45,8 @@
       const φ2 = lat2 * Math.PI / 180;
       const Δφ = (lat2 - lat1) * Math.PI / 180;
       const Δλ = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     }
 
@@ -51,31 +56,79 @@
           (position) => {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
-            const afstand = afstandInMeters(lat, lon, lokaalLat, lokaalLng);
+            document.getElementById('lat').value = lat;
+            document.getElementById('lng').value = lon;
             const status = document.getElementById('status');
-            if (afstand < maxAfstand) {
-              status.textContent = `✅ Locatie bevestigd (${Math.round(afstand)} meter).`;
-              document.getElementById('leskeuze').style.display = 'block';
+
+            let goedgekeurd = false;
+            let kortsteAfstand = Infinity;
+
+            for (const locatie of locaties) {
+              const afstand = afstandInMeters(lat, lon, locatie.lat, locatie.lng);
+              if (afstand < maxAfstand) {
+                goedgekeurd = true;
+                break;
+              }
+              if (afstand < kortsteAfstand) {
+                kortsteAfstand = afstand;
+              }
+            }
+
+            if (goedgekeurd) {
+              status.textContent = "✅ Top! Je bent op de juiste plek. Vul nu je gegevens in.";
+              document.getElementById('formulier').style.display = 'block';
             } else {
-              status.textContent = `❌ Je bent niet op de juiste locatie (${Math.round(afstand)} meter).`;
+              const afgerond = Math.round(kortsteAfstand);
+              status.textContent = `❌ Oeps! Je bent niet op een goedgekeurde plek. Je zit nu ongeveer ${afgerond} meter van de dichtstbijzijnde locatie.`;
             }
           },
           () => {
-            document.getElementById('status').textContent = 'Locatie ophalen mislukt of geweigerd.';
+            document.getElementById('status').textContent = '📍 We konden je locatie niet vinden of je hebt het geweigerd.';
           }
         );
       } else {
-        document.getElementById('status').textContent = 'GPS niet ondersteund op dit apparaat.';
+        document.getElementById('status').textContent = '❌ Je apparaat ondersteunt geen GPS.';
       }
     }
 
-    function doorgaan() {
-      const keuze = document.getElementById('les').value;
-      if (keuze) {
-        window.open(keuze, '_blank');
-      } else {
-        alert('Kies eerst een les.');
+    function verzenden(event) {
+      event.preventDefault();
+
+      // ✅ Extra beveiliging per telefoon (1x per 15 min)
+      const laatsteCheck = localStorage.getItem("laatsteCheckIn");
+      const nu = new Date().getTime();
+      if (laatsteCheck && (nu - parseInt(laatsteCheck)) < 15 * 60 * 1000) {
+        alert("⏳ Je hebt al ingecheckt op dit apparaat. Wacht 15 minuten voordat je opnieuw probeert.");
+        return;
       }
+
+      const form = event.target;
+      const formData = new FormData(form);
+      formData.append('tijd', new Date().toLocaleString());
+
+      fetch("https://script.google.com/macros/s/AKfycbzqa0p7bQxTAWhq-bFKxsgVZ6uyOjhbKN8SxPVbBgjGxFOUKN7nY5FEinRmIuZla0daNQ/exec", {
+        method: "POST",
+        body: formData
+      })
+      .then(response => response.text())
+      .then(text => {
+        if (text === "OK") {
+          alert("✅ Je bent ingecheckt. Dankjewel!");
+          localStorage.setItem("laatsteCheckIn", new Date().getTime());
+          form.reset();
+          document.getElementById("formulier").style.display = "none";
+          document.getElementById("status").textContent = "";
+        } else if (text === "AL_GEDAAN") {
+          alert("⏳ Je hebt al ingecheckt minder dan 15 minuten geleden.");
+        } else if (text === "ONGELDIG") {
+          alert("❌ Er is al ingecheckt met dit studentnummer maar met andere gegevens. Dat mag niet.");
+        } else {
+          alert("❌ Oei! Het opslaan ging mis.");
+        }
+      })
+      .catch(error => {
+        alert("❌ Foutje bij het versturen: " + error.message);
+      });
     }
   </script>
 </body>

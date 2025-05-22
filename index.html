@@ -37,7 +37,7 @@
       { lat: 52.0682, lng: 4.3248 },         // Haagse Hogeschool
       { lat: 52.0360341, lng: 4.3623357 }    // Thuis
     ];
-    const maxAfstand = 200; // meters
+    const maxAfstand = 200;
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -94,11 +94,11 @@
     function verzenden(event) {
       event.preventDefault();
 
-      // ✅ Extra beveiliging per telefoon (1x per 15 min)
-      const laatsteCheck = localStorage.getItem("laatsteCheckIn");
-      const nu = new Date().getTime();
-      if (laatsteCheck && (nu - parseInt(laatsteCheck)) < 15 * 60 * 1000) {
-        alert("⏳ Je hebt al ingecheckt op dit apparaat. Wacht 15 minuten voordat je opnieuw probeert.");
+      const vandaag = new Date().toISOString().split("T")[0];
+      const laatstIngecheckt = localStorage.getItem("checkin_datum");
+
+      if (laatstIngecheckt === vandaag) {
+        alert("⏳ Je hebt vandaag al ingecheckt op dit apparaat.");
         return;
       }
 
@@ -114,14 +114,12 @@
       .then(text => {
         if (text === "OK") {
           alert("✅ Je bent ingecheckt. Dankjewel!");
-          localStorage.setItem("laatsteCheckIn", new Date().getTime());
+          localStorage.setItem("checkin_datum", vandaag);
           form.reset();
           document.getElementById("formulier").style.display = "none";
           document.getElementById("status").textContent = "";
-        } else if (text === "AL_GEDAAN") {
-          alert("⏳ Je hebt al ingecheckt minder dan 15 minuten geleden.");
-        } else if (text === "ONGELDIG") {
-          alert("❌ Er is al ingecheckt met dit studentnummer maar met andere gegevens. Dat mag niet.");
+        } else if (text === "AL_GEDAAN_VANDAAG") {
+          alert("⏳ Je hebt vandaag al ingecheckt (volgens het systeem).");
         } else {
           alert("❌ Oei! Het opslaan ging mis.");
         }

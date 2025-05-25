@@ -9,10 +9,21 @@
     #formulier { display: none; }
     #status { font-weight: bold; margin-top: 20px; }
     #retryButton { display: none; }
+
+    #melding {
+      display: none;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+    }
+    .success { background-color: #d4edda; color: #155724; }
+    .error { background-color: #f8d7da; color: #721c24; }
+    .info { background-color: #cce5ff; color: #004085; }
   </style>
 </head>
 <body>
   <h2>Check-in MB en Wissel-les</h2>
+  <div id="melding"></div>
   <p>Ben je op school? Klik op de knop hieronder om te kijken of je op de juiste locatie bent om in te checken :-).</p>
   <button onclick="checkLocation()">📍 Check mijn locatie</button>
   <button id="retryButton" onclick="retryLocation()">Probeer locatie delen opnieuw</button>
@@ -36,11 +47,22 @@
 
   <script>
     const locaties = [
-      { lat: 52.0682, lng: 4.3248 },         // Haagse Hogeschool
-      { lat: 52.0360341, lng: 4.3623357 },   // Thuis (voorbeeld)
-      { lat: 52.0668769, lng: 4.3235892 }    // Skillslab
+      { lat: 52.0682, lng: 4.3248 },
+      { lat: 52.0360341, lng: 4.3623357 },
+      { lat: 52.0668769, lng: 4.3235892 }
     ];
     const maxAfstand = 250;
+
+    function toonMelding(tekst, type) {
+      const melding = document.getElementById("melding");
+      melding.className = "";
+      melding.classList.add(type);
+      melding.textContent = tekst;
+      melding.style.display = "block";
+      setTimeout(() => {
+        melding.style.display = "none";
+      }, 5000);
+    }
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -119,10 +141,10 @@
       event.preventDefault();
 
       const vandaag = new Date().toISOString().split("T")[0];
-      const laatstIngecheckt = localStorage.getItem("checkin_datum");
+      const laatstIngecheckt = localStorage.getItem("checkin_datum_mb");
 
       if (laatstIngecheckt === vandaag) {
-        alert("⏳ Je hebt vandaag al ingecheckt op dit apparaat.");
+        toonMelding("⏳ Je hebt vandaag al ingecheckt op dit apparaat.", "info");
         return;
       }
 
@@ -137,19 +159,19 @@
       .then(response => response.text())
       .then(text => {
         if (text === "OK") {
-          alert("✅ Je bent ingecheckt. Dankjewel!");
-          localStorage.setItem("checkin_datum", vandaag);
+          toonMelding("✅ Je bent ingecheckt. Dankjewel!", "success");
+          localStorage.setItem("checkin_datum_mb", vandaag);
           form.reset();
           document.getElementById("formulier").style.display = "none";
           document.getElementById("status").textContent = "";
         } else if (text === "AL_GEDAAN_VANDAAG") {
-          alert("⏳ Je hebt vandaag al ingecheckt (volgens het systeem).");
+          toonMelding("⏳ Je hebt vandaag al ingecheckt (volgens het systeem).", "info");
         } else {
-          alert("❌ Oei! Het opslaan ging mis.");
+          toonMelding("❌ Oei! Het opslaan ging mis.", "error");
         }
       })
       .catch(error => {
-        alert("❌ Foutje bij het versturen: " + error.message);
+        toonMelding("❌ Foutje bij het versturen: " + error.message, "error");
       });
     }
   </script>

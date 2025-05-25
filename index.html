@@ -1,19 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Check-in voor je les WL of MB</title>
+  <title>Check-in voor MB en Wissel-les</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; }
     input, label, button, select { display: block; width: 100%; margin-top: 10px; font-size: 1em; }
     #formulier { display: none; }
     #status { font-weight: bold; margin-top: 20px; }
+    #retryButton { display: none; }
   </style>
 </head>
 <body>
-  <h2>Check-in WL of MB</h2>
-  <p>Ben je op school? Klik op de knop hieronder om te kijken of je op de juiste locatie bent om in te checken.</p>
+  <h2>Check-in MB en Wissel-les</h2>
+  <p>Ben je op school? Klik op de knop hieronder om te kijken of je op de juiste locatie bent om in te checken :-).</p>
   <button onclick="checkLocation()">📍 Check mijn locatie</button>
+  <button id="retryButton" onclick="retryLocation()">Probeer locatie delen opnieuw</button>
   <div id="status"></div>
 
   <div id="formulier">
@@ -33,14 +35,12 @@
   </div>
 
   <script>
-    // Geef elk formulier een unieke ID, bijvoorbeeld de lesnaam of code
-    const formId = "MB"; // Pas dit aan per formulier!
-
     const locaties = [
       { lat: 52.0682, lng: 4.3248 },         // Haagse Hogeschool
-      { lat: 52.0360341, lng: 4.3623357 }    // Thuis (voorbeeld)
+      { lat: 52.0360341, lng: 4.3623357 },   // Thuis (voorbeeld)
+      { lat: 52.0668769, lng: 4.3235892 }    // Skillslab
     ];
-    const maxAfstand = 200; // meters
+    const maxAfstand = 250;
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -54,63 +54,81 @@
     }
 
     function checkLocation() {
+      document.getElementById('retryButton').style.display = 'none';
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            document.getElementById('lat').value = lat;
-            document.getElementById('lng').value = lon;
-            const status = document.getElementById('status');
-
-            let goedgekeurd = false;
-            let kortsteAfstand = Infinity;
-
-            for (const locatie of locaties) {
-              const afstand = afstandInMeters(lat, lon, locatie.lat, locatie.lng);
-              if (afstand < maxAfstand) {
-                goedgekeurd = true;
-                break;
-              }
-              if (afstand < kortsteAfstand) {
-                kortsteAfstand = afstand;
-              }
-            }
-
-            if (goedgekeurd) {
-              status.textContent = "✅ Top! Je bent op de juiste plek. Vul nu je gegevens in.";
-              document.getElementById('formulier').style.display = 'block';
-            } else {
-              const afgerond = Math.round(kortsteAfstand);
-              status.textContent = `❌ Oeps! Je bent niet op een goedgekeurde plek. Je zit nu ongeveer ${afgerond} meter van de dichtstbijzijnde locatie.`;
-            }
-          },
-          () => {
-            document.getElementById('status').textContent = '📍 We konden je locatie niet vinden of je hebt het geweigerd.';
-          }
+          locatieSucces,
+          locatieMislukt
         );
       } else {
         document.getElementById('status').textContent = '❌ Je apparaat ondersteunt geen GPS.';
       }
     }
 
+    function retryLocation() {
+      navigator.geolocation.getCurrentPosition(
+        locatieSucces,
+        locatieMisluktFinal
+      );
+    }
+
+    function locatieSucces(position) {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      document.getElementById('lat').value = lat;
+      document.getElementById('lng').value = lon;
+      const status = document.getElementById('status');
+      document.getElementById('retryButton').style.display = 'none';
+
+      let goedgekeurd = false;
+      let kortsteAfstand = Infinity;
+
+      for (const locatie of locaties) {
+        const afstand = afstandInMeters(lat, lon, locatie.lat, locatie.lng);
+        if (afstand < maxAfstand) {
+          goedgekeurd = true;
+          break;
+        }
+        if (afstand < kortsteAfstand) {
+          kortsteAfstand = afstand;
+        }
+      }
+
+      if (goedgekeurd) {
+        status.textContent = "✅ Top! Je bent op de juiste plek. Vul nu je gegevens in.";
+        document.getElementById('formulier').style.display = 'block';
+      } else {
+        const afgerond = Math.round(kortsteAfstand);
+        status.textContent = `❌ Oeps! Je bent niet op een goedgekeurde plek. Je zit nu ongeveer ${afgerond} meter van de dichtstbijzijnde locatie.`;
+      }
+    }
+
+    function locatieMislukt() {
+      document.getElementById('status').textContent =
+        '📍 We konden je locatie niet vinden of je hebt het geweigerd. Probeer het opnieuw.';
+      document.getElementById('retryButton').style.display = 'block';
+    }
+
+    function locatieMisluktFinal() {
+      document.getElementById('status').textContent =
+        '❌ Locatie ophalen lukt niet. Controleer je browserinstellingen en sta locatie delen toe. Lukt het nog steeds niet? Probeer een andere browser.';
+      document.getElementById('retryButton').style.display = 'none';
+    }
+
     function verzenden(event) {
       event.preventDefault();
 
       const vandaag = new Date().toISOString().split("T")[0];
-      // Unieke key per formulier per dag
-      const uniekeCheckKey = `checkin_${formId}_${vandaag}`;
-      const laatstIngecheckt = localStorage.getItem(uniekeCheckKey);
+      const laatstIngecheckt = localStorage.getItem("checkin_datum");
 
-      if (laatstIngecheckt === "done") {
-        alert("⏳ Je hebt vandaag al voor deze les ingecheckt op dit apparaat.");
+      if (laatstIngecheckt === vandaag) {
+        alert("⏳ Je hebt vandaag al ingecheckt op dit apparaat.");
         return;
       }
 
       const form = event.target;
       const formData = new FormData(form);
       formData.append('tijd', new Date().toLocaleString());
-      formData.append('formulier', formId); // optioneel: stuur formulier-id mee naar backend
 
       fetch("https://script.google.com/macros/s/AKfycbxUYQbzgvxZnZm8QDbqdevXoWFtblh5OQSqtDFgNuwTNKqiqf3rakcY3qHFslTUilEj/exec", {
         method: "POST",
@@ -120,12 +138,12 @@
       .then(text => {
         if (text === "OK") {
           alert("✅ Je bent ingecheckt. Dankjewel!");
-          localStorage.setItem(uniekeCheckKey, "done");
+          localStorage.setItem("checkin_datum", vandaag);
           form.reset();
           document.getElementById("formulier").style.display = "none";
           document.getElementById("status").textContent = "";
         } else if (text === "AL_GEDAAN_VANDAAG") {
-          alert("⏳ Je hebt vandaag al ingecheckt voor deze les (volgens het systeem).");
+          alert("⏳ Je hebt vandaag al ingecheckt (volgens het systeem).");
         } else {
           alert("❌ Oei! Het opslaan ging mis.");
         }

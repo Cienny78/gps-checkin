@@ -2,116 +2,228 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <title>Check-in voor MB of Wissel-les</title>
+  <title>Check-in voor MB en Wissel-les</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    :root{
-      --ok:#155724; --ok-bg:#d4edda;
-      --err:#721c24; --err-bg:#f8d7da;
-      --info:#004085; --info-bg:#cce5ff;
-      --muted:#6c757d; --card:#f7f7f8;
-    }
-    body{font-family:system-ui, Arial, sans-serif; padding:20px; max-width:540px; margin:auto; line-height:1.35; background:#fff;}
-    h2{margin:0 0 10px}
-    p{margin:8px 0 0}
-    .card{background:var(--card); border-radius:12px; padding:16px; margin:16px 0}
-    label{margin-top:10px; display:block; font-weight:600}
-    input, select, button{width:100%; margin-top:8px; font-size:1rem; padding:10px; border-radius:10px; border:1px solid #ddd}
-    input:disabled{background:#f2f2f2}
-    button{cursor:pointer; border:0; background:#111; color:#fff; font-weight:700}
-    button.secondary{background:#eee; color:#111; border:1px solid #ddd}
-    #formulier{display:none}
-    #status{font-weight:600; margin-top:12px}
-    #retryButton{display:none}
-    #loader{display:none; font-size:.95rem; color:var(--muted)}
-    .melding{display:none; padding:12px; margin:16px 0; border-radius:10px; font-weight:600}
-    .success{background:var(--ok-bg); color:var(--ok)}
-    .error{background:var(--err-bg); color:var(--err)}
-    .info{background:var(--info-bg); color:var(--info)}
-    .muted{color:var(--muted); font-size:.95rem}
-    .row{display:flex; gap:10px}
-    .row > *{flex:1}
-    .sr-live{position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden}
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 520px; margin: auto; line-height: 1.4; }
+    h2 { margin: 0 0 10px; }
+    p { margin: 8px 0; }
+    input, label, button, select { display: block; width: 100%; margin-top: 10px; font-size: 1em; }
+    input, select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+    button { padding: 10px; border: 0; border-radius: 8px; background: #111; color: #fff; font-weight: 700; cursor: pointer; }
+    button.secondary { background: #f1f1f1; color: #111; border: 1px solid #ddd; }
+    #formulier { display: none; margin-top: 12px; }
+    #status { font-weight: bold; margin-top: 12px; }
+    #retryButton { display: none; margin-top: 8px; }
+    #melding { display: none; padding: 10px; margin: 14px 0; border-radius: 8px; }
+    .success { background-color: #d4edda; color: #155724; }
+    .error { background-color: #f8d7da; color: #721c24; }
+    .info { background-color: #cce5ff; color: #004085; }
+    .hint { color:#6c757d; font-size:.95em; margin-top:8px; }
   </style>
 </head>
 <body>
-  <h2>Check-in MB of Wissel-les</h2>
-  <p>Ben je op school? Klik op de knop hieronder. We checken even je plek. 👇</p>
+  <h2>Check-in MB en Wissel-les</h2>
+  <p>Ben je op school? Klik hieronder. We kijken of je dicht genoeg bij school bent. 👇</p>
 
-  <div class="card">
-    <button id="locatieBtn" type="button">📍 Check mijn locatie</button>
-    <button id="retryButton" class="secondary" type="button">Probeer locatie opnieuw</button>
-    <div id="loader">Locatie ophalen… even geduld 🙏</div>
-    <div id="status" aria-live="polite"></div>
-  </div>
+  <div id="melding"></div>
 
-  <div id="melding" class="melding" role="status" aria-live="assertive"></div>
-  <div class="sr-live" aria-live="polite" id="live"></div>
+  <button type="button" onclick="checkLocation()">📍 Check mijn locatie</button>
+  <button id="retryButton" class="secondary" type="button" onclick="retryLocation()">Probeer locatie delen opnieuw</button>
+  <div id="status"></div>
+  <div id="httpsHint" class="hint"></div>
 
-  <div id="formulier" class="card">
+  <div id="formulier">
     <form id="checkinForm" onsubmit="verzenden(event)">
-      <div class="row">
-        <div>
-          <label for="voornaam">Voornaam</label>
-          <input type="text" id="voornaam" name="voornaam" autocomplete="given-name" required />
-        </div>
-        <div>
-          <label for="achternaam">Achternaam</label>
-          <input type="text" id="achternaam" name="achternaam" autocomplete="family-name" required />
-        </div>
-      </div>
+      <label for="voornaam">Wat is je voornaam?</label>
+      <input type="text" id="voornaam" name="voornaam" required>
 
-      <label for="studentnummer">Studentnummer</label>
-      <input type="text" id="studentnummer" name="studentnummer" inputmode="numeric" required />
+      <label for="achternaam">En je achternaam?</label>
+      <input type="text" id="achternaam" name="achternaam" required>
 
-      <label for="email">E-mail</label>
-      <input type="email" id="email" name="email" autocomplete="email" required />
+      <label for="studentnummer">Wat is je studentnummer?</label>
+      <input type="text" id="studentnummer" name="studentnummer" required>
 
-      <input type="hidden" id="lat" name="lat" />
-      <input type="hidden" id="lng" name="lng" />
+      <label for="email">En je e-mailadres?</label>
+      <input type="email" id="email" name="email" required>
+
+      <input type="hidden" id="lat" name="lat">
+      <input type="hidden" id="lng" name="lng">
 
       <button id="submitBtn" type="submit">✅ Inchecken</button>
-      <p class="muted">We slaan alleen op wat je hier invult + je locatiepunt en tijd.</p>
     </form>
   </div>
 
   <script>
-    // ====== Instellingen ======
+    // ===== Instellingen (zoals voorheen) =====
     const locaties = [
-      { lat: 52.0682, lng: 4.3248 },        // Locatie 1
-      { lat: 52.0360341, lng: 4.3623357 },  // Locatie 2
-      { lat: 52.0668769, lng: 4.3235892 }   // Locatie 3
+      { lat: 52.0682, lng: 4.3248 },
+      { lat: 52.0360341, lng: 4.3623357 },
+      { lat: 52.0668769, lng: 4.3235892 }
     ];
     const maxAfstand = 250; // meters
     const ENDPOINT = "https://script.google.com/macros/s/AKfycbxUYQbzgvxZnZm8QDbqdevXoWFtblh5OQSqtDFgNuwTNKqiqf3rakcY3qHFslTUilEj/exec";
 
-    // ====== Helpers ======
+    // ===== Kleine helpers =====
     function $(id){ return document.getElementById(id); }
 
-    function toonMelding(tekst, type="info", autoHideMs=5000){
-      const box = $("melding");
-      box.className = "melding " + type;
-      box.textContent = tekst;
-      box.style.display = "block";
-      $("live").textContent = tekst; // schermlezer
-      if (autoHideMs){
-        setTimeout(()=>{ box.style.display="none"; }, autoHideMs);
-      }
-    }
-
-    function toonStatus(tekst){
-      $("status").textContent = tekst;
-      $("live").textContent = tekst;
-    }
-
-    function formatMeters(m){
-      const n = Math.round(m);
-      return new Intl.NumberFormat("nl-NL").format(n) + " m";
+    function toonMelding(tekst, type) {
+      const melding = $("melding");
+      melding.className = "";
+      if (type) melding.classList.add(type);
+      melding.textContent = tekst;
+      melding.style.display = "block";
+      // melding verdwijnt na 5s
+      setTimeout(() => { melding.style.display = "none"; }, 5000);
     }
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
-      const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
-      const dφ = (lat2 - lat1) * Math.PI/180;
-      const dλ = (lon2 - lon1) * Math.PI/180;
-      const a = Math.sin(dφ/2) ** 2 + Math.cos(φ1) * Math.cos(φ2)***
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function httpsCheck(){
+      // Geolocatie werkt alleen op https of localhost
+      if (location.protocol !== "https:" && location.hostname !== "localhost") {
+        $("httpsHint").textContent = "Tip: gebruik https (of localhost). Op http blokkeert de browser vaak je locatie.";
+      }
+    }
+
+    // ===== Locatie flow =====
+    function checkLocation() {
+      $("retryButton").style.display = "none";
+      $("status").textContent = "";
+
+      if (!navigator.geolocation) {
+        $("status").textContent = "❌ Je apparaat ondersteunt geen GPS.";
+        return;
+      }
+
+      $("status").textContent = "📍 Locatie ophalen… geef toestemming alstublieft.";
+      navigator.geolocation.getCurrentPosition(
+        locatieSucces,
+        locatieMislukt,
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      );
+    }
+
+    function retryLocation() {
+      $("status").textContent = "📍 We proberen het opnieuw…";
+      navigator.geolocation.getCurrentPosition(
+        locatieSucces,
+        locatieMisluktFinal,
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+      );
+    }
+
+    function locatieSucces(position) {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      $("lat").value = lat;
+      $("lng").value = lon;
+
+      let goedgekeurd = false;
+      let kortsteAfstand = Infinity;
+
+      for (var i=0; i<locaties.length; i++){
+        const d = afstandInMeters(lat, lon, locaties[i].lat, locaties[i].lng);
+        if (d < maxAfstand) { goedgekeurd = true; break; }
+        if (d < kortsteAfstand) kortsteAfstand = d;
+      }
+
+      if (goedgekeurd) {
+        $("status").textContent = "✅ Top! Je bent op de juiste plek. Vul nu je gegevens in.";
+        $("formulier").style.display = "block";
+      } else {
+        const afgerond = Math.round(kortsteAfstand);
+        $("status").textContent = "❌ Niet op een goedgekeurde plek. Dichtstbijzijnde locatie: ongeveer " + afgerond + " meter.";
+        $("formulier").style.display = "none";
+        $("retryButton").style.display = "inline-block";
+      }
+    }
+
+    function locatieMislukt(error) {
+      $("status").textContent = "📍 We konden je locatie niet vinden of je hebt het geweigerd. Probeer het opnieuw.";
+      $("retryButton").style.display = "inline-block";
+    }
+
+    function locatieMisluktFinal(error) {
+      $("status").textContent = "❌ Locatie ophalen lukt niet. Sta locatie delen toe in je browser of probeer een andere browser.";
+      $("retryButton").style.display = "none";
+    }
+
+    // ===== Verzenden flow (zoals voorheen) =====
+    function verzenden(event) {
+      event.preventDefault();
+
+      const vandaag = new Date().toISOString().split("T")[0];
+      const laatstIngecheckt = localStorage.getItem("checkin_datum_mb");
+
+      if (laatstIngecheckt === vandaag) {
+        toonMelding("⏳ Je hebt vandaag al ingecheckt op dit apparaat.", "info");
+        return;
+      }
+
+      const form = event.target;
+      const formData = new FormData(form);
+      formData.append('tijd', new Date().toLocaleString());
+
+      // kleine validatie e-mail
+      var email = $("email").value.trim();
+      var emailOK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!emailOK){
+        toonMelding("❌ Vul een geldig e-mailadres in.", "error");
+        $("email").focus();
+        return;
+      }
+
+      // knop tijdelijk uit
+      var submitBtn = $("submitBtn");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        var oudeTekst = submitBtn.textContent;
+        submitBtn.textContent = "Bezig…";
+      }
+
+      fetch(ENDPOINT, { method: "POST", body: formData })
+        .then(function(response){
+          return response.text().then(function(text){ return { ok: response.ok, status: response.status, text: text }; });
+        })
+        .then(function(res){
+          if (!res.ok) {
+            throw new Error("Serverfout (" + res.status + ")");
+          }
+          if (res.text === "OK") {
+            toonMelding("✅ Je bent ingecheckt. Dankjewel!", "success");
+            localStorage.setItem("checkin_datum_mb", vandaag);
+            form.reset();
+            $("formulier").style.display = "none";
+            $("status").textContent = "";
+          } else if (res.text === "AL_GEDAAN_VANDAAG") {
+            toonMelding("⏳ Je hebt vandaag al ingecheckt (volgens het systeem).", "info");
+          } else {
+            toonMelding("❌ Oei! Het opslaan ging mis. Antwoord: " + res.text, "error");
+          }
+        })
+        .catch(function(error){
+          toonMelding("❌ Foutje bij het versturen: " + error.message, "error");
+        })
+        .finally(function(){
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = oudeTekst;
+          }
+        });
+    }
+
+    // start
+    httpsCheck();
+  </script>
+</body>
+</html>

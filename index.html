@@ -1,179 +1,117 @@
 <!DOCTYPE html>
-<html>
+<html lang="nl">
 <head>
+  <meta charset="utf-8" />
   <title>Check-in voor MB en Wissel-les</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; }
-    input, label, button, select { display: block; width: 100%; margin-top: 10px; font-size: 1em; }
-    #formulier { display: none; }
-    #status { font-weight: bold; margin-top: 20px; }
-    #retryButton { display: none; }
-
-    #melding {
-      display: none;
-      padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 8px;
+    :root{
+      --ok:#155724; --ok-bg:#d4edda;
+      --err:#721c24; --err-bg:#f8d7da;
+      --info:#004085; --info-bg:#cce5ff;
+      --muted:#6c757d; --card:#f7f7f8;
     }
-    .success { background-color: #d4edda; color: #155724; }
-    .error { background-color: #f8d7da; color: #721c24; }
-    .info { background-color: #cce5ff; color: #004085; }
+    body{font-family:system-ui, Arial, sans-serif; padding:20px; max-width:540px; margin:auto; line-height:1.35; background:#fff;}
+    h2{margin:0 0 10px}
+    p{margin:8px 0 0}
+    .card{background:var(--card); border-radius:12px; padding:16px; margin:16px 0}
+    label{margin-top:10px; display:block; font-weight:600}
+    input, select, button{width:100%; margin-top:8px; font-size:1rem; padding:10px; border-radius:10px; border:1px solid #ddd}
+    input:disabled{background:#f2f2f2}
+    button{cursor:pointer; border:0; background:#111; color:#fff; font-weight:700}
+    button.secondary{background:#eee; color:#111; border:1px solid #ddd}
+    #formulier{display:none}
+    #status{font-weight:600; margin-top:12px}
+    #retryButton{display:none}
+    #loader{display:none; font-size:.95rem; color:var(--muted)}
+    .melding{display:none; padding:12px; margin:16px 0; border-radius:10px; font-weight:600}
+    .success{background:var(--ok-bg); color:var(--ok)}
+    .error{background:var(--err-bg); color:var(--err)}
+    .info{background:var(--info-bg); color:var(--info)}
+    .muted{color:var(--muted); font-size:.95rem}
+    .row{display:flex; gap:10px}
+    .row > *{flex:1}
+    .sr-live{position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden}
   </style>
 </head>
 <body>
-  <h2>Check-in MB en Wissel-les</h2>
-  <div id="melding"></div>
-  <p>Ben je op school? Klik op de knop hieronder om te kijken of je op de juiste locatie bent om in te checken :-).</p>
-  <button onclick="checkLocation()">📍 Check mijn locatie</button>
-  <button id="retryButton" onclick="retryLocation()">Probeer locatie delen opnieuw</button>
-  <div id="status"></div>
+  <h2>Check-in MB of Wissel-les</h2>
+  <p>Ben je op school? Klik op de knop hieronder. We checken even je plek. 👇</p>
 
-  <div id="formulier">
-    <form onsubmit="verzenden(event)">
-      <label>Wat is je voornaam?</label>
-      <input type="text" id="voornaam" name="voornaam" required>
-      <label>En je achternaam?</label>
-      <input type="text" id="achternaam" name="achternaam" required>
-      <label>Wat is je studentnummer?</label>
-      <input type="text" id="studentnummer" name="studentnummer" required>
-      <label>En je e-mailadres?</label>
-      <input type="email" id="email" name="email" required>
-      <input type="hidden" id="lat" name="lat">
-      <input type="hidden" id="lng" name="lng">
-      <button type="submit">✅ Inchecken</button>
+  <div class="card">
+    <button id="locatieBtn" type="button">📍 Check mijn locatie</button>
+    <button id="retryButton" class="secondary" type="button">Probeer locatie opnieuw</button>
+    <div id="loader">Locatie ophalen… even geduld 🙏</div>
+    <div id="status" aria-live="polite"></div>
+  </div>
+
+  <div id="melding" class="melding" role="status" aria-live="assertive"></div>
+  <div class="sr-live" aria-live="polite" id="live"></div>
+
+  <div id="formulier" class="card">
+    <form id="checkinForm" onsubmit="verzenden(event)">
+      <div class="row">
+        <div>
+          <label for="voornaam">Voornaam</label>
+          <input type="text" id="voornaam" name="voornaam" autocomplete="given-name" required />
+        </div>
+        <div>
+          <label for="achternaam">Achternaam</label>
+          <input type="text" id="achternaam" name="achternaam" autocomplete="family-name" required />
+        </div>
+      </div>
+
+      <label for="studentnummer">Studentnummer</label>
+      <input type="text" id="studentnummer" name="studentnummer" inputmode="numeric" required />
+
+      <label for="email">E-mail</label>
+      <input type="email" id="email" name="email" autocomplete="email" required />
+
+      <input type="hidden" id="lat" name="lat" />
+      <input type="hidden" id="lng" name="lng" />
+
+      <button id="submitBtn" type="submit">✅ Inchecken</button>
+      <p class="muted">We slaan alleen op wat je hier invult + je locatiepunt en tijd.</p>
     </form>
   </div>
 
   <script>
+    // ====== Instellingen ======
     const locaties = [
-      { lat: 52.0682, lng: 4.3248 },
-      { lat: 52.0360341, lng: 4.3623357 },
-      { lat: 52.0668769, lng: 4.3235892 }
+      { lat: 52.0682, lng: 4.3248 },        // Locatie 1
+      { lat: 52.0360341, lng: 4.3623357 },  // Locatie 2
+      { lat: 52.0668769, lng: 4.3235892 }   // Locatie 3
     ];
-    const maxAfstand = 250;
+    const maxAfstand = 250; // meters
+    const ENDPOINT = "https://script.google.com/macros/s/AKfycbxUYQbzgvxZnZm8QDbqdevXoWFtblh5OQSqtDFgNuwTNKqiqf3rakcY3qHFslTUilEj/exec";
 
-    function toonMelding(tekst, type) {
-      const melding = document.getElementById("melding");
-      melding.className = "";
-      melding.classList.add(type);
-      melding.textContent = tekst;
-      melding.style.display = "block";
-      setTimeout(() => {
-        melding.style.display = "none";
-      }, 5000);
+    // ====== Helpers ======
+    function $(id){ return document.getElementById(id); }
+
+    function toonMelding(tekst, type="info", autoHideMs=5000){
+      const box = $("melding");
+      box.className = "melding " + type;
+      box.textContent = tekst;
+      box.style.display = "block";
+      $("live").textContent = tekst; // schermlezer
+      if (autoHideMs){
+        setTimeout(()=>{ box.style.display="none"; }, autoHideMs);
+      }
+    }
+
+    function toonStatus(tekst){
+      $("status").textContent = tekst;
+      $("live").textContent = tekst;
+    }
+
+    function formatMeters(m){
+      const n = Math.round(m);
+      return new Intl.NumberFormat("nl-NL").format(n) + " m";
     }
 
     function afstandInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
-      const φ1 = lat1 * Math.PI / 180;
-      const φ2 = lat2 * Math.PI / 180;
-      const Δφ = (lat2 - lat1) * Math.PI / 180;
-      const Δλ = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    }
-
-    function checkLocation() {
-      document.getElementById('retryButton').style.display = 'none';
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          locatieSucces,
-          locatieMislukt
-        );
-      } else {
-        document.getElementById('status').textContent = '❌ Je apparaat ondersteunt geen GPS.';
-      }
-    }
-
-    function retryLocation() {
-      navigator.geolocation.getCurrentPosition(
-        locatieSucces,
-        locatieMisluktFinal
-      );
-    }
-
-    function locatieSucces(position) {
-      const lat = position.coords.latitude;
-      const lon = position.coords.longitude;
-      document.getElementById('lat').value = lat;
-      document.getElementById('lng').value = lon;
-      const status = document.getElementById('status');
-      document.getElementById('retryButton').style.display = 'none';
-
-      let goedgekeurd = false;
-      let kortsteAfstand = Infinity;
-
-      for (const locatie of locaties) {
-        const afstand = afstandInMeters(lat, lon, locatie.lat, locatie.lng);
-        if (afstand < maxAfstand) {
-          goedgekeurd = true;
-          break;
-        }
-        if (afstand < kortsteAfstand) {
-          kortsteAfstand = afstand;
-        }
-      }
-
-      if (goedgekeurd) {
-        status.textContent = "✅ Top! Je bent op de juiste plek. Vul nu je gegevens in.";
-        document.getElementById('formulier').style.display = 'block';
-      } else {
-        const afgerond = Math.round(kortsteAfstand);
-        status.textContent = `❌ Oeps! Je bent niet op een goedgekeurde plek. Je zit nu ongeveer ${afgerond} meter van de dichtstbijzijnde locatie.`;
-      }
-    }
-
-    function locatieMislukt() {
-      document.getElementById('status').textContent =
-        '📍 We konden je locatie niet vinden of je hebt het geweigerd. Probeer het opnieuw.';
-      document.getElementById('retryButton').style.display = 'block';
-    }
-
-    function locatieMisluktFinal() {
-      document.getElementById('status').textContent =
-        '❌ Locatie ophalen lukt niet. Controleer je browserinstellingen en sta locatie delen toe. Lukt het nog steeds niet? Probeer een andere browser.';
-      document.getElementById('retryButton').style.display = 'none';
-    }
-
-    function verzenden(event) {
-      event.preventDefault();
-
-      const vandaag = new Date().toISOString().split("T")[0];
-      const laatstIngecheckt = localStorage.getItem("checkin_datum_mb");
-
-      if (laatstIngecheckt === vandaag) {
-        toonMelding("⏳ Je hebt vandaag al ingecheckt op dit apparaat.", "info");
-        return;
-      }
-
-      const form = event.target;
-      const formData = new FormData(form);
-      formData.append('tijd', new Date().toLocaleString());
-
-      fetch("https://script.google.com/macros/s/AKfycbxUYQbzgvxZnZm8QDbqdevXoWFtblh5OQSqtDFgNuwTNKqiqf3rakcY3qHFslTUilEj/exec", {
-        method: "POST",
-        body: formData
-      })
-      .then(response => response.text())
-      .then(text => {
-        if (text === "OK") {
-          toonMelding("✅ Je bent ingecheckt. Dankjewel!", "success");
-          localStorage.setItem("checkin_datum_mb", vandaag);
-          form.reset();
-          document.getElementById("formulier").style.display = "none";
-          document.getElementById("status").textContent = "";
-        } else if (text === "AL_GEDAAN_VANDAAG") {
-          toonMelding("⏳ Je hebt vandaag al ingecheckt (volgens het systeem).", "info");
-        } else {
-          toonMelding("❌ Oei! Het opslaan ging mis.", "error");
-        }
-      })
-      .catch(error => {
-        toonMelding("❌ Foutje bij het versturen: " + error.message, "error");
-      });
-    }
-  </script>
-</body>
-</html>
+      const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+      const dφ = (lat2 - lat1) * Math.PI/180;
+      const dλ = (lon2 - lon1) * Math.PI/180;
+      const a = Math.sin(dφ/2) ** 2 + Math.cos(φ1) * Math.cos(φ2)***
